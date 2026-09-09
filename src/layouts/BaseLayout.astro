@@ -1,0 +1,32 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import UniverseShell from '../components/UniverseShell.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  pageKind?: 'home' | 'post';
+}
+
+const {
+  title,
+  description = 'A spatial blog navigated as a living universe.',
+  pageKind = 'home',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-page-kind={pageKind} transition:animate="none">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#02030a" />
+    <title>{title}</title>
+    <ClientRouter fallback="animate" />
+  </head>
+  <body>
+    <UniverseShell />
+    <slot />
+  </body>
+</html>

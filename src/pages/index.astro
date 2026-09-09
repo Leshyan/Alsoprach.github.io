@@ -1,0 +1,102 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Nebula — Spatial Notes" pageKind="home">
+  <main class="cover-copy" id="cover-copy">
+    <p class="cover-copy__kicker">NEBULA / FIELD NOTES</p>
+    <h1>Every idea begins as gravity.</h1>
+    <p class="cover-copy__hint">Move the cursor. Let the sky gather. Click when the light is ready.</p>
+  </main>
+
+  <div class="cosmos-guide" id="cosmos-guide" aria-hidden="true">
+    <span>click the field to capture the mouse</span>
+    <span>fly toward a nebula</span>
+  </div>
+</BaseLayout>
+
+
+<style>
+  .cover-copy {
+    position: fixed;
+    z-index: 2;
+    left: 50%;
+    top: 50%;
+    width: min(900px, calc(100vw - 48px));
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    filter: blur(10px);
+    transform: translate(-50%, -54%) scale(.985);
+    transition: opacity .72s ease, transform .9s cubic-bezier(.2,.8,.2,1), filter .72s ease, visibility 0s linear .72s;
+  }
+
+  .cover-copy__kicker {
+    margin: 0 0 18px;
+    font-size: 10px;
+    letter-spacing: .34em;
+    color: rgba(225,233,255,.44);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(38px, 6.1vw, 88px);
+    font-weight: 400;
+    line-height: .98;
+    letter-spacing: -.035em;
+    color: rgba(247,249,255,.96);
+    text-shadow: 0 0 42px rgba(141,169,255,.12);
+  }
+
+  .cover-copy__hint {
+    margin: 22px auto 0;
+    font-size: 11px;
+    letter-spacing: .06em;
+    color: rgba(220,229,255,.40);
+  }
+
+  .cosmos-guide {
+    position: fixed;
+    z-index: 2;
+    left: 50%;
+    top: 26px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    font-size: 9px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(225,235,255,.28);
+    opacity: 0;
+    transition: opacity .6s ease;
+    pointer-events: none;
+  }
+
+  /* Default-hidden is deliberate: during Astro swaps the new <html> can exist briefly
+     before the persistent engine re-applies its state. Positive visibility rules prevent
+     the cover title from flashing during article return. */
+  :global(html[data-page-kind="home"][data-universe-state="cover"]) .cover-copy {
+    opacity: 1;
+    visibility: visible;
+    filter: none;
+    transform: translate(-50%, -50%);
+    transition-delay: 0s;
+  }
+
+  :global(html[data-page-kind="home"][data-universe-state="collapse"]) .cover-copy {
+    opacity: 0;
+    visibility: visible;
+    filter: blur(10px);
+    transform: translate(-50%, -54%) scale(.985);
+    transition-delay: 0s;
+  }
+
+  :global(html[data-page-kind="home"][data-universe-state="cosmos"][data-pointer-locked="false"]) .cosmos-guide { opacity: 1; }
+
+  @media (max-width: 640px) {
+    .cover-copy__hint { line-height: 1.65; max-width: 28rem; }
+    .cosmos-guide { display: none; }
+  }
+</style>

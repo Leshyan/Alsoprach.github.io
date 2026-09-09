@@ -1,0 +1,52 @@
+export const UNIVERSE_CONFIG = {
+  camera: {
+    fov: 54,
+    near: 0.05,
+    far: 900,
+    coverZ: 24,
+    cosmosZ: 18,
+    bounds: {
+      x: [-120, 120] as const,
+      y: [-100, 100] as const,
+      z: [-160, 38] as const,
+    },
+  },
+  motion: {
+    cruiseSpeed: 10.5,
+    boostMultiplier: 1.9,
+    mouseYawSensitivity: 0.00165,
+    mousePitchSensitivity: 0.00145,
+    maxPitch: Math.PI * 0.47,
+  },
+  particles: {
+    intro: 18000,
+    introReduced: 6000,
+    background: 18000,
+    backgroundReduced: 6500,
+    nebulaStructure: 5600,
+    nebulaStructureReduced: 2600,
+    nebulaCloud: 1500,
+    nebulaCloudReduced: 650,
+    articleBurst: 2400,
+    articleBurstReduced: 800,
+  },
+  timings: {
+    collapse: 0.74,
+    collapseReduced: 0.24,
+    bigBang: 2.9,
+    bigBangReduced: 1.0,
+    article: 1.0,
+    articleReduced: 0.28,
+  },
+  focus: {
+    articleWorldMax: 42,
+    articleLabelRadius: 0.2,
+    articleEnterRadius: 0.06,
+    articleEnterWorldMax: 24,
+    nebulaLabelNear: 22,
+    nebulaLabelFar: 38,
+  },
+  renderer: {
+    maxPixelRatio: 1.75,
+  },
+} as const;

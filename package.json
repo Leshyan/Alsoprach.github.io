@@ -1,0 +1,30 @@
+{
+  "name": "nebula-blog",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "check": "astro check",
+    "build": "astro build",
+    "preview": "astro preview",
+    "audit": "node scripts/audit.mjs",
+    "test:syntax": "node scripts/syntax-scan.mjs",
+    "test:core": "node scripts/core-tests.mjs",
+    "verify:offline": "npm run audit && npm run test:syntax && npm run test:core",
+    "verify": "npm run verify:offline && npm run check && npm run build"
+  },
+  "dependencies": {
+    "astro": "7.3.2",
+    "three": "0.185.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.4",
+    "@types/three": "0.185.0",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "npm@10.9.2"
+}

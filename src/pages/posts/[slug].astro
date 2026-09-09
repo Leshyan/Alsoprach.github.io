@@ -1,0 +1,92 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout title={`${post.data.title} — Nebula`} description={post.data.description} pageKind="post">
+  <main class="article-page" data-article-slug={post.id}>
+    <a class="article-back" href="/" aria-label="Return to the universe">
+      <span aria-hidden="true">←</span>
+      <em>return to universe</em>
+    </a>
+
+    <article>
+      <header>
+        <p class="article-theme">{post.data.theme}</p>
+        <h1>{post.data.title}</h1>
+        <p class="article-description">{post.data.description}</p>
+        <time datetime={post.data.published.toISOString()}>{post.data.published.toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+      </header>
+      <div class="article-rule"></div>
+      <div class="article-body"><Content /></div>
+    </article>
+  </main>
+</BaseLayout>
+
+
+<style is:global>
+  .article-page {
+    position: relative;
+    z-index: 3;
+    min-height: 100vh;
+    padding: clamp(100px, 13vh, 150px) 24px 100px;
+    background:
+      linear-gradient(to bottom, rgba(3,5,15,.52), rgba(3,5,15,.80) 24%, rgba(3,5,15,.92) 72%, rgba(3,5,15,.98)),
+      radial-gradient(circle at 50% 0%, rgba(64,75,130,.08), transparent 38%);
+    animation: article-in 1s cubic-bezier(.18,.72,.18,1) backwards;
+    transition: opacity .45s ease, transform .55s ease;
+  }
+
+  .article-page article { width: min(760px, 100%); margin: 0 auto; }
+  .article-page header { margin-bottom: 42px; }
+  .article-theme { margin: 0 0 14px; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: rgba(190,205,255,.50); }
+  .article-page h1 { margin: 0; font: 400 clamp(42px, 7vw, 78px)/.98 Georgia, 'Times New Roman', serif; letter-spacing: -.035em; color: rgba(250,251,255,.97); }
+  .article-description { max-width: 620px; margin: 25px 0 14px; font-size: 15px; line-height: 1.7; color: rgba(228,233,247,.58); }
+  .article-page time { font-size: 10px; letter-spacing: .08em; color: rgba(222,229,247,.32); }
+  .article-rule { height: 1px; margin: 0 0 42px; background: linear-gradient(90deg, rgba(180,196,255,.28), rgba(180,196,255,0)); }
+
+  .article-body { font: 400 17px/1.9 Georgia, 'Times New Roman', serif; color: rgba(236,238,246,.80); }
+  .article-body h2 { margin: 2.2em 0 .65em; font: 400 30px/1.2 Georgia, 'Times New Roman', serif; color: rgba(250,251,255,.92); }
+  .article-body p { margin: 0 0 1.4em; }
+  .article-body li { margin: .55em 0; }
+  .article-body a { color: #cad8ff; }
+
+  .article-back {
+    position: fixed;
+    z-index: 5;
+    top: 26px;
+    left: 26px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    border: 0;
+    padding: 10px 12px;
+    background: transparent;
+    color: rgba(230,237,255,.58);
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .article-back span { font-size: 18px; font-style: normal; transition: transform .2s ease; }
+  .article-back em { font-style: normal; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
+  .article-back:hover { color: rgba(245,248,255,.92); }
+  .article-back:hover span { transform: translateX(-3px); }
+
+  @keyframes article-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (max-width: 640px) {
+    .article-page { padding-left: 20px; padding-right: 20px; }
+    .article-back { top: 14px; left: 10px; }
+  }
+</style>

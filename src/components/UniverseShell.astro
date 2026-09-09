@@ -1,0 +1,324 @@
+---
+import { getCollection } from 'astro:content';
+import { NEBULAE, type ArticleStarDefinition } from '../data/universe';
+
+const posts = (await getCollection('posts')).sort((a, b) => a.id.localeCompare(b.id));
+const articleStars: ArticleStarDefinition[] = posts.map((post) => ({
+  slug: post.id,
+  title: post.data.title,
+  subtitle: post.data.description,
+  theme: post.data.theme,
+  offset: post.data.universe.offset,
+}));
+---
+
+<div id="universe-shell" class="universe-shell" transition:persist="nebula-universe">
+  <canvas id="universe-canvas" aria-label="Interactive nebula universe"></canvas>
+
+  <div id="cursor-glow" class="cursor-glow" aria-hidden="true"></div>
+  <div id="crosshair" class="crosshair" aria-hidden="true"><span></span><span></span></div>
+
+  <div id="article-label" class="article-label" aria-hidden="true">
+    <div class="article-label__eyebrow" id="article-label-theme"></div>
+    <div class="article-label__title" id="article-label-title"></div>
+    <div class="article-label__subtitle" id="article-label-subtitle"></div>
+    <div class="article-label__hint">center the star</div>
+  </div>
+
+  <div id="nebula-label" class="nebula-label" aria-hidden="true">
+    <span id="nebula-label-title"></span>
+    <small id="nebula-label-subtitle"></small>
+  </div>
+
+  <div id="flight-hud" class="flight-hud" aria-hidden="true">
+    <span>WASD / ↑↓←→ · camera-relative move</span>
+    <span>Shift · boost</span>
+    <span>mouse · look</span>
+    <span>ESC · release cursor</span>
+  </div>
+
+  <nav class="universe-fallback" aria-label="Articles">
+    <p>Browse articles directly.</p>
+    <div>
+      {posts.map((post) => <a href={`/posts/${encodeURIComponent(post.id)}`}>{post.data.title}</a>)}
+    </div>
+  </nav>
+
+  <div id="universe-vignette" class="universe-vignette" aria-hidden="true"></div>
+</div>
+
+<script define:vars={{ articleStars, nebulae: NEBULAE }}>
+  window.__NEBULA_CONTENT__ = { articleStars, nebulae };
+</script>
+
+<script>
+  import { navigate } from 'astro:transitions/client';
+  import { UniverseEngine } from '../lib/universe/UniverseEngine';
+
+  interface NavigationPreparationEvent extends Event {
+    from?: URL;
+    to?: URL;
+    loader?: () => Promise<unknown>;
+  }
+
+  const isPostPath = (pathname: string) => pathname.startsWith('/posts/');
+  const slugFromPath = (pathname: string) => isPostPath(pathname)
+    ? decodeURIComponent(pathname.split('/').filter(Boolean).at(-1) ?? '')
+    : null;
+  const getRouteKind = () => (isPostPath(location.pathname) ? 'post' : 'home');
+  const getRouteSlug = () => slugFromPath(location.pathname);
+
+  const applyFallbackState = () => {
+    const route = getRouteKind();
+    document.documentElement.dataset.pageKind = route;
+    document.documentElement.dataset.universeUnavailable = 'true';
+    document.documentElement.dataset.universeState = route === 'home' ? 'cover' : 'article';
+    document.documentElement.dataset.pointerLocked = 'false';
+  };
+
+  const boot = () => {
+    const shell = document.querySelector<HTMLElement>('#universe-shell');
+    if (!shell || !window.__NEBULA_CONTENT__) return;
+    if (window.__nebulaUniverseUnavailable) {
+      applyFallbackState();
+      return;
+    }
+
+    if (!window.__nebulaUniverse) {
+      try {
+        window.__nebulaUniverse = new UniverseEngine(shell, {
+          content: window.__NEBULA_CONTENT__,
+          initialRoute: getRouteKind(),
+          initialSlug: getRouteSlug(),
+          onRequestPost: (slug) => navigate(`/posts/${encodeURIComponent(slug)}`),
+        });
+        delete document.documentElement.dataset.universeUnavailable;
+        window.__nebulaUniverse.start();
+      } catch (error) {
+        console.error('Nebula universe could not start; using the content fallback.', error);
+        window.__nebulaUniverseUnavailable = true;
+        applyFallbackState();
+        return;
+      }
+    }
+
+    window.__nebulaUniverse.handleRoute(getRouteKind(), getRouteSlug());
+  };
+
+  const wireNavigationGuard = () => {
+    if (window.__nebulaNavigationGuardWired) return;
+    window.__nebulaNavigationGuardWired = true;
+
+    document.addEventListener('astro:before-preparation', (rawEvent) => {
+      const event = rawEvent as NavigationPreparationEvent;
+      const engine = window.__nebulaUniverse;
+      if (!engine || !event.from || !event.to || typeof event.loader !== 'function') return;
+
+      const fromPost = isPostPath(event.from.pathname);
+      const toPost = isPostPath(event.to.pathname);
+      if (fromPost === toPost) return;
+
+      const originalLoader = event.loader;
+      const fromRoute = fromPost ? 'post' : 'home';
+      const fromSlug = slugFromPath(event.from.pathname);
+      if (!fromPost && toPost) {
+        const slug = slugFromPath(event.to.pathname);
+        if (!slug) return;
+        event.loader = async () => {
+          try {
+            await engine.prepareEntry(slug);
+            await originalLoader();
+          } catch (error) {
+            engine.recoverNavigationFailure(fromRoute, fromSlug);
+            throw error;
+          }
+        };
+        return;
+      }
+
+      if (fromPost && !toPost) {
+        event.loader = async () => {
+          try {
+            await engine.prepareReturn(fromSlug);
+            await originalLoader();
+          } catch (error) {
+            engine.recoverNavigationFailure(fromRoute, fromSlug);
+            throw error;
+          }
+        };
+      }
+    });
+  };
+
+  wireNavigationGuard();
+  boot();
+  if (!window.__nebulaPageLoadWired) {
+    window.__nebulaPageLoadWired = true;
+    // after-swap runs before the new page is painted; re-assert the persistent engine
+    // state immediately so route-level CSS never sees a transient state-less document.
+    document.addEventListener('astro:after-swap', boot);
+    document.addEventListener('astro:page-load', boot);
+  }
+</script>
+
+<style is:global>
+  :root {
+    color-scheme: dark;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #02030a;
+    color: #f6f7ff;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: #02030a; }
+  body { min-height: 100vh; overflow-x: hidden; }
+
+  .universe-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 42%, rgba(21, 27, 58, 0.16), transparent 42%), #02030a;
+  }
+
+  #universe-canvas { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; display: block; outline: none; }
+
+  .cursor-glow {
+    z-index: 2;
+    --x: 50vw;
+    --y: 50vh;
+    position: fixed;
+    left: var(--x);
+    top: var(--y);
+    width: 14rem;
+    height: 14rem;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(circle, rgba(238,246,255,.13) 0%, rgba(147,183,255,.06) 26%, transparent 68%);
+    filter: blur(8px);
+    transition: opacity .35s ease;
+    mix-blend-mode: screen;
+  }
+
+  .crosshair {
+    z-index: 2;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity .35s ease;
+    pointer-events: none;
+  }
+
+  .crosshair span { position: absolute; left: 50%; top: 50%; background: rgba(238,245,255,.56); box-shadow: 0 0 8px rgba(210,229,255,.36); }
+  .crosshair span:first-child { width: 10px; height: 1px; transform: translate(-50%, -50%); }
+  .crosshair span:last-child { width: 1px; height: 10px; transform: translate(-50%, -50%); }
+
+  .article-label {
+    z-index: 2;
+    position: fixed;
+    left: 50%;
+    top: calc(50% + 52px);
+    width: min(480px, calc(100vw - 48px));
+    transform: translate(-50%, 10px);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s linear, transform .25s ease;
+    text-shadow: 0 2px 24px rgba(0,0,0,.8);
+  }
+
+  .article-label.is-visible { transform: translate(-50%, 0); }
+  .article-label__eyebrow { font-size: 10px; letter-spacing: .28em; opacity: .5; margin-bottom: 8px; }
+  .article-label__title { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(21px, 2.1vw, 34px); letter-spacing: .015em; }
+  .article-label__subtitle { margin-top: 8px; font-size: 12px; line-height: 1.6; opacity: .5; }
+  .article-label__hint { margin-top: 13px; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; opacity: .38; }
+
+  .nebula-label {
+    z-index: 2;
+    position: fixed;
+    left: 32px;
+    bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .35s ease;
+  }
+  .nebula-label span { font-size: 11px; letter-spacing: .26em; }
+  .nebula-label small { font-size: 10px; letter-spacing: .05em; opacity: .38; }
+
+  .flight-hud {
+    z-index: 2;
+    position: fixed;
+    right: 30px;
+    bottom: 28px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: min(720px, 66vw);
+    font-size: 9px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: rgba(225,234,255,.35);
+    opacity: 0;
+    transition: opacity .4s ease;
+    pointer-events: none;
+  }
+
+  .universe-fallback {
+    position: fixed;
+    z-index: 2;
+    left: 50%;
+    bottom: 34px;
+    width: min(760px, calc(100vw - 40px));
+    transform: translateX(-50%);
+    display: none;
+    text-align: center;
+    color: rgba(226,233,255,.56);
+  }
+  .universe-fallback p { margin: 0 0 14px; font-size: 10px; letter-spacing: .08em; }
+  .universe-fallback div { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; }
+  .universe-fallback a { color: rgba(239,243,255,.76); font: 400 14px/1.5 Georgia, 'Times New Roman', serif; text-decoration: none; }
+  .universe-fallback a:hover { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+  html[data-universe-unavailable="true"][data-page-kind="home"] .universe-fallback { display: block; }
+  html[data-universe-unavailable="true"] #universe-canvas { opacity: 0; }
+
+  @media (hover: none) and (pointer: coarse) {
+    html[data-page-kind="home"] .universe-fallback { display: block; }
+  }
+
+  .universe-vignette {
+    position: fixed;
+    z-index: 1;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 40%, rgba(0,0,8,.2) 76%, rgba(0,0,8,.68) 100%);
+    opacity: .66;
+  }
+
+  html[data-universe-state="article-return"] .article-page {
+    animation: none;
+    opacity: 0;
+    transform: scale(.992);
+    pointer-events: none;
+  }
+
+  @media (max-width: 720px) {
+    .flight-hud { display: none; }
+    .nebula-label { left: 20px; bottom: 22px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .article-label, .flight-hud, .nebula-label, .cursor-glow { transition-duration: 0.01ms !important; }
+  }
+</style>
