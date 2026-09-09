@@ -2,10 +2,9 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="Nebula — Spatial Notes" pageKind="home">
+<BaseLayout title="Leshyan's blog" pageKind="home">
   <main class="cover-copy" id="cover-copy">
-    <p class="cover-copy__kicker">NEBULA / FIELD NOTES</p>
-    <h1>Every idea begins as gravity.</h1>
+    <h1>Per aspera ad astra</h1>
     <p class="cover-copy__hint">Move the cursor. Let the sky gather. Click when the light is ready.</p>
   </main>
 
@@ -30,13 +29,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     filter: blur(10px);
     transform: translate(-50%, -54%) scale(.985);
     transition: opacity .72s ease, transform .9s cubic-bezier(.2,.8,.2,1), filter .72s ease, visibility 0s linear .72s;
-  }
-
-  .cover-copy__kicker {
-    margin: 0 0 18px;
-    font-size: 10px;
-    letter-spacing: .34em;
-    color: rgba(225,233,255,.44);
   }
 
   h1 {

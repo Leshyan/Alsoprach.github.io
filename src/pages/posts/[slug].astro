@@ -11,7 +11,7 @@ const { post } = Astro.props;
 const { Content } = await render(post);
 ---
 
-<BaseLayout title={`${post.data.title} — Nebula`} description={post.data.description} pageKind="post">
+<BaseLayout title={`${post.data.title} — Leshyan's blog`} description={post.data.description} pageKind="post">
   <main class="article-page" data-article-slug={post.id}>
     <a class="article-back" href="/" aria-label="Return to the universe">
       <span aria-hidden="true">←</span>
